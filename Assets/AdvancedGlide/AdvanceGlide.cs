@@ -52,7 +52,7 @@ public class AdvanceGlide : MonoBehaviour {
         //transform.Rotate(0, axisH * speedTurn * Time.deltaTime, 0);
         if(isGliding == false)
         {
-            Vector3 move = transform.right * axisV * speedMove;
+            Vector3 move = transform.right * axisH * speedMove;
             velocity.x = move.x;
             velocity.z = move.z;
         }
@@ -252,14 +252,14 @@ public class AdvanceGlide : MonoBehaviour {
             flightAngle += .5f;
             //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.rotation.y);//, transform.localRotation.z);
             transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
-            print("Tilt down");
+            //print("Tilt down");
         }
         else if (Input.GetAxis("Vertical"/*"FlightVertical"*/) < 0)
         {
             flightAngle -= .5f;
             //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.localRotation.y);//, transform.localRotation.z);
             transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
-            print("Tilt up");
+            //print("Tilt up");
         }
 
         if (Input.GetAxis("Horizontal") < 0 && canBoost)
@@ -267,14 +267,14 @@ public class AdvanceGlide : MonoBehaviour {
             boostMeter -= Time.deltaTime * 4;
             forwardAirMovement += 1 * Time.deltaTime * -2f;
             if (boostMeter < 0) canBoost = false;
-            print("Boost: " + boostMeter);
+           // print("Boost: " + boostMeter);
         }
         else if (Input.GetAxis("Horizontal") > 0 && canBreak)
         {
             brakesMeter -= Time.deltaTime * 2;
             forwardAirMovement += 1 * Time.deltaTime * 2f;
             if (brakesMeter < 0) canBreak = false;
-            print("Brake: " + brakesMeter);
+            //print("Brake: " + brakesMeter);
         }
 
         if (canBoost == false)
@@ -294,14 +294,14 @@ public class AdvanceGlide : MonoBehaviour {
             {
                 forwardAirMovement += flightAngle * Time.deltaTime * -.1f;
                 print(forwardAirMovement);
-                print("Speed up");
+               // print("Speed up");
 
             }
             else if (flightAngle < 0)
             {
                 forwardAirMovement += flightAngle * Time.deltaTime * -.02f;
                 print(forwardAirMovement);
-                print("Slow down");
+               // print("Slow down");
             }
         }
         else
@@ -315,7 +315,7 @@ public class AdvanceGlide : MonoBehaviour {
         //print("FLIGHT SPEED: " + forwardAirMovement);
         if (forwardAirMovement >= terminalVelocity) forwardAirMovement = terminalVelocity;
         velocity.x = forwardAirMovement;
-        velocity.y = -flightAngle * .04f;
+        velocity.y = -flightAngle * .1f;
 
     }
 
@@ -345,14 +345,14 @@ public class AdvanceGlide : MonoBehaviour {
             boostMeter -= Time.deltaTime * 4;
             forwardAirMovement += 1 * Time.deltaTime * 2f;
             if (boostMeter < 0) canBoost = false;
-            print("Boost: " + boostMeter);
+           // print("Boost: " + boostMeter);
         }
         else if (Input.GetAxis("Horizontal") < 0 && canBreak)
         {
             brakesMeter -= Time.deltaTime * 2;
             forwardAirMovement += 1 * Time.deltaTime * -2f;
             if (brakesMeter < 0) canBreak = false;
-            print("Brake: " + brakesMeter);
+            //print("Brake: " + brakesMeter);
         }
 
         if (canBoost == false)
@@ -371,13 +371,13 @@ public class AdvanceGlide : MonoBehaviour {
             if (flightAngle < 0)
             {
                 forwardAirMovement += flightAngle * Time.deltaTime * -.1f;
-                print("Speed up");
+               // print("Speed up");
 
             }
             else if (flightAngle > 0)
             {
                 forwardAirMovement += flightAngle * Time.deltaTime * -.02f;
-                print("Slow down");
+               // print("Slow down");
             }
         }
         else
@@ -391,7 +391,7 @@ public class AdvanceGlide : MonoBehaviour {
         //print("FLIGHT SPEED: " + forwardAirMovement);
         if (forwardAirMovement >= terminalVelocity) forwardAirMovement = terminalVelocity;
         velocity.x = forwardAirMovement;
-        velocity.y = flightAngle * .04f;
+        velocity.y = flightAngle * .1f;
 
         //flightTime -= Time.deltaTime;
         //print(flightTime);
