@@ -1,10 +1,12 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class AdvanceGlide : MonoBehaviour {
 
     CharacterController player;
+    public GameObject wings;
 
     public float speedMove;
     public float speedTurn;
@@ -12,12 +14,17 @@ public class AdvanceGlide : MonoBehaviour {
     bool isJumping = false;
     bool isGliding = false;
     bool isRising = false;
+    bool invertedFlight = false;
+    bool canBoost = true;
+    bool canBreak = true;
     public float impulseJump = 5;
     public float baseGravityMultiplier = 2;
     public float jumpGravityMultiplier = .5f;
     public float glideGravityMultiplier = .05f;
     public float flyingGravityMultiplier = 0;
     public float terminalVelocity = 20;
+    public float boostMeter = 10;
+    public float brakesMeter = 20;
 
     Vector3 airMovement;
     public float forwardAirMovement;
@@ -25,11 +32,16 @@ public class AdvanceGlide : MonoBehaviour {
     public float flightTime = 100;
     public const float FLIGHTCAP = 10;
 
+    Vector3 startRot;
+
 
     // Use this for initialization
     void Start()
     {
         player = GetComponent<CharacterController>();
+        startRot = transform.localEulerAngles;
+        print(startRot);
+        
     }
 
     // Update is called once per frame
@@ -38,10 +50,13 @@ public class AdvanceGlide : MonoBehaviour {
         float axisH = Input.GetAxis("Horizontal");
 
         //transform.Rotate(0, axisH * speedTurn * Time.deltaTime, 0);
-        Vector3 move = transform.forward * axisV * speedMove;
-        velocity.x = move.x;
-        velocity.z = move.z;
-
+        if(isGliding == false)
+        {
+            Vector3 move = transform.right * axisV * speedMove;
+            velocity.x = move.x;
+            velocity.z = move.z;
+        }
+        
         float gravityScale = baseGravityMultiplier;
         if (player.isGrounded)
         {
@@ -89,90 +104,301 @@ public class AdvanceGlide : MonoBehaviour {
              }
          }*/
 
-        if (Input.GetButton("Deploy") && isGliding == false)
+        if (Input.GetButtonUp("Deploy") /*&& isGliding == false*/)
         {
-            isGliding = true;
-            
-            forwardAirMovement = velocity.z;
+            if(isGliding == true)
+            {
+                isGliding = false;
+                transform.localEulerAngles = Vector3.zero;
+                wings.SetActive(false);
+                return;
+            }
 
+            isGliding = true;
+            forwardAirMovement = velocity.x;
             flightAngle = 0;
-            
             gravityScale = flyingGravityMultiplier;
+            wings.SetActive(true);
+
+            if (forwardAirMovement > 0)
+            {
+                invertedFlight = false;
+            } else
+            {
+                invertedFlight = true;
+            }
+            
+
         }
 
         if (isGliding)
         {
-            if (player.isGrounded)
+            gravityScale = flyingGravityMultiplier;
+            if(invertedFlight == false)
             {
-                if (Input.GetButton("Deploy")) isGliding = false; transform.localEulerAngles = Vector3.zero;
+                GlideMode();
+            }
+            else if (invertedFlight == true)
+            {
+                InvertedGlideMode();
+            }
+            
+            /*if (player.isGrounded)
+            {
+                if (Input.GetButton("Deploy")) isGliding = false; //transform.localEulerAngles = new Vector3(0, 90, 0);
 
             }
             //GlideMode();
             gravityScale = flyingGravityMultiplier;
             //print("FLIGHT SPEED: " + forwardAirMovement);
-            if (Input.GetAxis("FlightVertical") > 0)
+            if (Input.GetAxis("FlightVertical") < 0)
             {
                 flightAngle += .5f;
-                transform.localEulerAngles = new Vector3(transform.localRotation.x + flightAngle, transform.localRotation.y);
-                
-                
-               //print("Tilt down");
+                //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.rotation.y);//, transform.localRotation.z);
+                transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
+
+
+                //print("Tilt down");
             }
-            else if(Input.GetAxis("FlightVertical") < 0 && forwardAirMovement > 0)
+            else if(Input.GetAxis("FlightVertical") > 0 && forwardAirMovement > 0)
             {
                 flightAngle -= .5f;
-                transform.localEulerAngles = new Vector3(transform.localRotation.x + flightAngle, transform.localRotation.y);
+                //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.localRotation.y);//, transform.localRotation.z);
+                transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
                 //print("Tilt up");
             }
 
-            if(forwardAirMovement >= 0)
+            if(Input.GetAxis("Horizontal") > 0 && canBoost)
             {
-                if(flightAngle > 0)
+                boostMeter -= Time.deltaTime * 4;
+                forwardAirMovement += 1 * Time.deltaTime * 2f;
+                if (boostMeter < 0) canBoost = false;
+                print("Boost: "+boostMeter);
+            }
+            else if (Input.GetAxis("Horizontal") < 0 && canBreak)
+            {
+                brakesMeter -= Time.deltaTime * 2;
+                forwardAirMovement += 1 * Time.deltaTime * -2f;
+                if (brakesMeter < 0) canBreak = false;
+                print("Brake: "+brakesMeter);
+            }
+
+            if(canBoost == false)
+            {
+                boostMeter += Time.deltaTime;
+                if (boostMeter >= 10) canBoost = true;
+            }
+            if(canBreak == false)
+            {
+                brakesMeter += Time.deltaTime;
+                if (brakesMeter >= 20) canBreak = true;
+            }
+
+            if (forwardAirMovement >= 0)
+            {
+                if(flightAngle < 0)
                 {
-                    forwardAirMovement += flightAngle * Time.deltaTime * .1f;
-                    //print("Speed up");
+                    forwardAirMovement += flightAngle * Time.deltaTime * -.1f;
+                    print("Speed up");
                     
                 }
-                else if(flightAngle < 0)
+                else if(flightAngle > 0)
                 {
-                    forwardAirMovement += flightAngle * Time.deltaTime * .02f;
-                    //print("Slow down");
+                    forwardAirMovement += flightAngle * Time.deltaTime * -.02f;
+                    print("Slow down");
                 }
             }
             else
             {
                 forwardAirMovement = 0;
-                flightAngle += 10 * Time.deltaTime;
-                transform.localEulerAngles = new Vector3(transform.localRotation.x + flightAngle, transform.localRotation.y);
+                flightAngle -= 10 * Time.deltaTime;
+                //transform.localEulerAngles = new Vector3(transform.localRotation.x + flightAngle, transform.localRotation.y);
+                transform.localEulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
             }
             //print("FLIGHT ANGLE" + flightAngle);
             //print("FLIGHT SPEED: " + forwardAirMovement);
             if (forwardAirMovement >= terminalVelocity) forwardAirMovement = terminalVelocity;
-            velocity.z = forwardAirMovement;
-            velocity.y = -flightAngle * .04f ;
-
-            flightTime -= Time.deltaTime;
+                velocity.x = forwardAirMovement;
+            velocity.y = flightAngle * .04f ;
+            
+            //flightTime -= Time.deltaTime;
             //print(flightTime);
             if(flightTime <= 0)
             {
                 transform.localEulerAngles = Vector3.zero;
                 isGliding = false;
-            }
-        }
+            }*/
+        }// end of glide logic
+        
 
-        if (velocity.z >= terminalVelocity) velocity.z = terminalVelocity;
+        if (velocity.x >= terminalVelocity) velocity.x = terminalVelocity;
 
-        if (flightTime < FLIGHTCAP && isGliding == false)
+        /*if (flightTime < FLIGHTCAP && isGliding == false)
         {
             flightTime += Time.deltaTime * 2;
-        }
+        }*/
         //print(flightTime);
+
         velocity += Physics.gravity * Time.deltaTime * gravityScale;
         player.Move(velocity * Time.deltaTime);
     }
 
-    void GlideMode()
+    private void InvertedGlideMode()
     {
 
+        //print("FLIGHT SPEED: " + forwardAirMovement);
+        if (Input.GetAxis("Vertical"/*"FlightVertical"*/) > 0 && forwardAirMovement < 0)
+        {
+            flightAngle += .5f;
+            //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.rotation.y);//, transform.localRotation.z);
+            transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
+            print("Tilt down");
+        }
+        else if (Input.GetAxis("Vertical"/*"FlightVertical"*/) < 0)
+        {
+            flightAngle -= .5f;
+            //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.localRotation.y);//, transform.localRotation.z);
+            transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
+            print("Tilt up");
+        }
+
+        if (Input.GetAxis("Horizontal") < 0 && canBoost)
+        {
+            boostMeter -= Time.deltaTime * 4;
+            forwardAirMovement += 1 * Time.deltaTime * -2f;
+            if (boostMeter < 0) canBoost = false;
+            print("Boost: " + boostMeter);
+        }
+        else if (Input.GetAxis("Horizontal") > 0 && canBreak)
+        {
+            brakesMeter -= Time.deltaTime * 2;
+            forwardAirMovement += 1 * Time.deltaTime * 2f;
+            if (brakesMeter < 0) canBreak = false;
+            print("Brake: " + brakesMeter);
+        }
+
+        if (canBoost == false)
+        {
+            boostMeter += Time.deltaTime;
+            if (boostMeter >= 10) canBoost = true;
+        }
+        if (canBreak == false)
+        {
+            brakesMeter += Time.deltaTime;
+            if (brakesMeter >= 20) canBreak = true;
+        }
+
+        if (forwardAirMovement <= 0)
+        {
+            if (flightAngle > 0)
+            {
+                forwardAirMovement += flightAngle * Time.deltaTime * -.1f;
+                print(forwardAirMovement);
+                print("Speed up");
+
+            }
+            else if (flightAngle < 0)
+            {
+                forwardAirMovement += flightAngle * Time.deltaTime * -.02f;
+                print(forwardAirMovement);
+                print("Slow down");
+            }
+        }
+        else
+        {
+            /*forwardAirMovement = 0;
+            flightAngle -= 10 * Time.deltaTime;
+            //transform.localEulerAngles = new Vector3(transform.localRotation.x + flightAngle, transform.localRotation.y);
+            transform.localEulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);*/
+        }
+        //print("FLIGHT ANGLE" + flightAngle);
+        //print("FLIGHT SPEED: " + forwardAirMovement);
+        if (forwardAirMovement >= terminalVelocity) forwardAirMovement = terminalVelocity;
+        velocity.x = forwardAirMovement;
+        velocity.y = -flightAngle * .04f;
+
+    }
+
+    void GlideMode()
+    {
+        
+        //print("FLIGHT SPEED: " + forwardAirMovement);
+        if (Input.GetAxis("Vertical"/*"FlightVertical"*/) < 0 && forwardAirMovement > 0)
+        {
+            flightAngle += .5f;
+            //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.rotation.y);//, transform.localRotation.z);
+            transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
+
+
+            //print("Tilt down");
+        }
+        else if (Input.GetAxis("Vertical"/*"FlightVertical"*/) > 0 )
+        {
+            flightAngle -= .5f;
+            //transform.eulerAngles = new Vector3(transform.rotation.x + flightAngle, transform.localRotation.y);//, transform.localRotation.z);
+            transform.eulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
+            //print("Tilt up");
+        }
+
+        if (Input.GetAxis("Horizontal") > 0 && canBoost)
+        {
+            boostMeter -= Time.deltaTime * 4;
+            forwardAirMovement += 1 * Time.deltaTime * 2f;
+            if (boostMeter < 0) canBoost = false;
+            print("Boost: " + boostMeter);
+        }
+        else if (Input.GetAxis("Horizontal") < 0 && canBreak)
+        {
+            brakesMeter -= Time.deltaTime * 2;
+            forwardAirMovement += 1 * Time.deltaTime * -2f;
+            if (brakesMeter < 0) canBreak = false;
+            print("Brake: " + brakesMeter);
+        }
+
+        if (canBoost == false)
+        {
+            boostMeter += Time.deltaTime;
+            if (boostMeter >= 10) canBoost = true;
+        }
+        if (canBreak == false)
+        {
+            brakesMeter += Time.deltaTime;
+            if (brakesMeter >= 20) canBreak = true;
+        }
+
+        if (forwardAirMovement >= 0)
+        {
+            if (flightAngle < 0)
+            {
+                forwardAirMovement += flightAngle * Time.deltaTime * -.1f;
+                print("Speed up");
+
+            }
+            else if (flightAngle > 0)
+            {
+                forwardAirMovement += flightAngle * Time.deltaTime * -.02f;
+                print("Slow down");
+            }
+        }
+        else
+        {
+            forwardAirMovement = 0;
+            flightAngle -= 10 * Time.deltaTime;
+            //transform.localEulerAngles = new Vector3(transform.localRotation.x + flightAngle, transform.localRotation.y);
+            transform.localEulerAngles = new Vector3(startRot.x, startRot.y, startRot.z + flightAngle);
+        }
+        //print("FLIGHT ANGLE" + flightAngle);
+        //print("FLIGHT SPEED: " + forwardAirMovement);
+        if (forwardAirMovement >= terminalVelocity) forwardAirMovement = terminalVelocity;
+        velocity.x = forwardAirMovement;
+        velocity.y = flightAngle * .04f;
+
+        //flightTime -= Time.deltaTime;
+        //print(flightTime);
+        if (flightTime <= 0)
+        {
+            transform.localEulerAngles = Vector3.zero;
+            isGliding = false;
+        }
     }
 }
